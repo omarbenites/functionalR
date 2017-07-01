@@ -1,0 +1,233 @@
+---
+title: "Boost Statistical Computing through Functional Programming in R"
+author: Omar Benites
+output:
+  html_document: 
+    toc: yes
+  html_notebook: default
+---
+
+```{r}
+  knitr::clean_cache()
+
+```
+
+# Module 1: Introduction
+
+Almost everything in R is based on functions or functional-approach programming. A function is a piece of code that we usually run in our analysis that are compresed in a expresed that can be re-used.
+
+A function is compouned by:
+
+- **Name of the function**: To put a function name you need the assignment operator  **<-**.  
+- **The arguments** (formal argumentes) of the function. Could be whatever type of data structure.
+- **The body**: for what the function is composed.
+- **The environment**: it's the environment where the environment is defined. By the default is the global environment. This is imporntant because it is where the function looks for variables, this is called the *scope* of the function.
+
+
+```{r, echo=TRUE, eval=TRUE}
+add <- function(x,y = 1){
+        x+y
+}
+##
+formals(add)
+body(add)
+environment(add)
+```
+
+One important things that is the *return* command. If we use *return*, automatically the function answers with the result and then stop. For example
+
+
+```{r, echo=TRUE, eval=TRUE}
+minor <- function(x, y){
+      r <- x-y #local variable r
+      return(r)
+      1+1
+}
+
+minor(x = 15, y =12)
+
+```
+
+
+Function are also objects. For example if we assign the function *mean* to new variable, it looks like:
+
+
+```{r, echo=TRUE, eval=TRUE}
+mean2 <- mean
+v <- c(15, 12)
+mean2(v)
+```
+
+
+# Environments 
+
+## Scoping of R-functions
+
+Scoping describes how R looks up values by name. For example
+
+```{r, echo=TRUE, eval=TRUE}
+f <- function() {
+ x <- 1
+ y <- 2
+ c(x, y)
+}
+f()
+```
+
+In this case, the function *f* looks for the values which are inside the function. However exists another cases where the function looks for one level up. Let see:
+
+```{r, echo=TRUE, eval=TRUE}
+z <- 15
+f <- function() {
+ x <- 1
+ y <- 2
+ c(x, y, z)
+}
+f()
+```
+In this case, the function does not define **z** in their scope. As a consequence, the funcion searchs outside the function's environment (or local environment) and goes one level up and catch *z* in the global environment. In case *z* is defined it clearly show the output *(1 ,2 ,15)*, otherwise it prints an error. For example (uncomment to see the mistake):
+
+```{r, echo=TRUE, eval=TRUE}
+# z <- 15
+# f <- function() {
+#  x <- 1
+#  y <- 2
+#  c(x, y, z, d)
+# }
+# f()
+```
+
+See that variable **d** is not defined in the local or global environment. For this reason, it shows an error as follow: *Error in f() : object 'd' not found*.
+
+Okay, now I open a new question: What happen wheter a variable is defined inside and outside the function scope?. Let see
+
+```{r, echo=TRUE, eval=TRUE}
+z <- 15
+producto <- function(z) {
+ z <- 1
+ y <- 2
+ z*y
+}
+producto()
+```
+The answer is simple, the function prioritize the local variable over the global variable.
+
+
+
+
+# Module 2:  Functional Programming (FP)
+
+Several times we work with repeated procedures that need to be automatized. In order to do this, we requiere the use **for** loops. The **For** loop is a finite repeated procedure to couldn't help write the same pice of code for different values. An example as following:
+
+- Calculation of the media **col_media** 
+
+```{r, echo=TRUE, eval=TRUE}
+#The st4gi library
+library(st4gi)
+#By now, we are going to extract the first two dull columns.
+df <- pjpz09[,-c(1:2)]
+
+#The pre-allocation of 'med' variable that storage the medians for each column or trait
+col_media <- vector("numeric", length = ncol(df))
+#A second option is using: 
+
+#seq_along is the same as write  'i in 1:length(col_media)' 
+for(i in seq_along(col_media) ){
+  col_media[i] <- mean(df[[i]])
+  #col_media[i] <- mean(df[,i])
+}
+col_media
+```
+
+
+- Calculation of the median **col_mediana** 
+
+```{r, echo=TRUE, eval=TRUE}
+#The st4gi library
+library(st4gi)
+df <- pjpz09[,-c(1:2)]
+col_mediana <- vector("numeric", length = ncol(df))
+for(i in seq_along(col_media) ){
+  col_mediana[i] <- median(df[[i]])
+}
+col_media
+```
+
+- Finally the standard deviation **col_devs**
+
+```{r, echo=TRUE, eval=TRUE}
+#The st4gi library
+library(st4gi)
+df <- pjpz09[,-c(1:2)]
+col_devs <- vector("numeric", length = ncol(df))
+for(i in seq_along(col_devs) ){
+  col_devs[i] <- sd(df[[i]])
+}
+col_devs
+```
+
+As we can see, the for loop help us to calculate iteratively the mean, median and s.deviation for different *i* columns. However a new question arises based on this examples: *How about iterate functions and not only values?*.  Following the first question derives the second one, *Functions could be arguments of other functions?*
+
+To elucidate these doubts, we are going to pass a function as argument of other function called **col_summary**. **col_summary** has two arguments **df** and **fun**, where *df* is the data and *fun* is a function argument.
+
+```{r, echo=TRUE, eval=TRUE}
+library(st4gi)
+df <- pjpz09[,-c(1:2)]
+
+col_summary <- function(df, fun) {
+    #Second way to pre-allocate, using numeric(length(vector or dataframe))  
+    output <- numeric(length(df))
+    for (i in seq_along(df)) {
+        output[i] <- fun(df[[i]])
+    }
+    output
+}
+#Let make some calculations over the columns using the mean, median and standard desviation
+col_summary(df, fun = mean)
+col_summary(df, fun = median)
+col_summary(df, fun = sd)
+```
+
+It is plain to see that a function can be an argument of other function. Note that the *fun* argument is used without double quotes. 
+
+The R-base program provides function which use the functional programming approach. The set of function of this family are: apply, sapply, rapply, etc. Lets review an example:
+
+```{r, echo=TRUE, eval=TRUE}
+### Using sapply function ###
+library(st4gi)
+df <- pjpz09[,-c(1:2)]
+sapply(df, mean)
+````
+
+```{r, echo=TRUE, eval=TRUE}
+### Using our implentation
+col_summary(df, fun = mean)
+````
+
+
+Along the year, many r-packages has rised and one of them tackle the functional programming approach, this is the **purrr** package from Hadley Wickham. **purr** package (written with three *r*s similarly to cat's meowth) provides a robust implementation of the FP paradigm in R. Besides, it wrapps *C++* code to make the computing much more faster when you are dealing with big datasets or the famous *Big Data*.
+
+
+## The purr package
+
+To begin with *purrr* package, we will use the set of *map* functions. For example, lets calculate the mean over all traits using *purr*
+
+```{r, echo=TRUE, eval=TRUE}
+library(purrr)
+map_dbl(.x = df, .f= mean)
+````
+
+What *purrr* basically does is:
+
+1. Loop over a vector *.x*. More generally, *.x* could be a data structue as vectors, data frames, lists, etc.
+2. Do something to each element *.f*. For instance, it pass the mean function over all the data structure.
+3. Return the results.
+
+
+The map function varies in their return type. Lets see:
+
+- *map()* returns a list
+- *map_dbl()* returns a double vector
+- *map_lgl()* returns a logical vector
+- *map_int()* returns a integer vector
+- *map_chr()* returns a character vector

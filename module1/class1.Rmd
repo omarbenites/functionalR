@@ -7,7 +7,7 @@ output:
   html_notebook: default
 ---
 
-```{r}
+```{r,echo=FALSE}
   knitr::clean_cache()
 
 ```
@@ -113,8 +113,6 @@ producto()
 The answer is simple, the function prioritize the local variable over the global variable.
 
 
-
-
 # Module 2:  Functional Programming (FP)
 
 Several times we work with repeated procedures that need to be automatized. In order to do this, we requiere the use **for** loops. The **For** loop is a finite repeated procedure to couldn't help write the same pice of code for different values. An example as following:
@@ -126,11 +124,9 @@ Several times we work with repeated procedures that need to be automatized. In o
 library(st4gi)
 #By now, we are going to extract the first two dull columns.
 df <- pjpz09[,-c(1:2)]
-
 #The pre-allocation of 'med' variable that storage the medians for each column or trait
 col_media <- vector("numeric", length = ncol(df))
 #A second option is using: 
-
 #seq_along is the same as write  'i in 1:length(col_media)' 
 for(i in seq_along(col_media) ){
   col_media[i] <- mean(df[[i]])
@@ -147,10 +143,10 @@ col_media
 library(st4gi)
 df <- pjpz09[,-c(1:2)]
 col_mediana <- vector("numeric", length = ncol(df))
-for(i in seq_along(col_media) ){
+for(i in seq_along(col_mediana) ){
   col_mediana[i] <- median(df[[i]])
 }
-col_media
+col_mediana
 ```
 
 - Finally the standard deviation **col_devs**
@@ -197,37 +193,189 @@ The R-base program provides function which use the functional programming approa
 library(st4gi)
 df <- pjpz09[,-c(1:2)]
 sapply(df, mean)
-````
+```
 
 ```{r, echo=TRUE, eval=TRUE}
 ### Using our implentation
 col_summary(df, fun = mean)
-````
+```
 
 
 Along the year, many r-packages has rised and one of them tackle the functional programming approach, this is the **purrr** package from Hadley Wickham. **purr** package (written with three *r*s similarly to cat's meowth) provides a robust implementation of the FP paradigm in R. Besides, it wrapps *C++* code to make the computing much more faster when you are dealing with big datasets or the famous *Big Data*.
 
 
-## The purr package
+## The purrr package
 
 To begin with *purrr* package, we will use the set of *map* functions. For example, lets calculate the mean over all traits using *purr*
 
-```{r, echo=TRUE, eval=TRUE}
+```{r, echo=TRUE, eval=TRUE, warning=FALSE}
 library(purrr)
 map_dbl(.x = df, .f= mean)
-````
+```
 
-What *purrr* basically does is:
+What `purrr` basically does is:
 
-1. Loop over a vector *.x*. More generally, *.x* could be a data structue as vectors, data frames, lists, etc.
-2. Do something to each element *.f*. For instance, it pass the mean function over all the data structure.
+1. Loop over a vector `.x`. More generally, `.x` could be a data structue as vectors, data frames, lists, etc.
+
+2. Do something to each element `.f`. For instance, it pass the mean function over all the data structure.
+
 3. Return the results.
 
 
-The map function varies in their return type. Lets see:
+The `map` function varies in their return type. Here the complete list:
 
-- *map()* returns a list
-- *map_dbl()* returns a double vector
-- *map_lgl()* returns a logical vector
-- *map_int()* returns a integer vector
-- *map_chr()* returns a character vector
+- ``map()`` returns a list. You can pass complex function as summary, etc.
+- ``map_dbl()`` returns a double vector
+- ``map_lgl()`` returns a logical vector
+- ``map_int()`` returns a integer vector
+- ``map_chr()`` returns a character vector
+
+The map functions use the `...`  (*dot dot dot*) argument to pass along additional arguments to `.f` each time it’s called. For example, we can pass the trim argument to the `mean()` function:
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE}
+map_dbl(df, mean, trim = 0.5)
+```
+
+Multiple arguments can be passed along using commas to separate them. For example, we can also pass the na.rm argument to mean():
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE}
+map_dbl(df, mean, trim = 0.5, na.rm = TRUE)
+```
+
+
+Do you notice somthing weird about `map` arguments?. Yes, you don't have to specify the arguments by name (or double quoted arguments), but it is good practice!
+
+
+You may be wondering why the arguments to `map()` are `.x` and `.f` and not `x` and `f`? It's because `.x` and `.f` are very unlikely to be argument names you might pass through the `...`, thereby preventing confusion about whether an argument belongs to `map()` or to the function being mapped.
+
+Now we are going to use the `cropdatape` dataset
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+library(cropdatape)
+library(dplyr)
+dtrice <- cropdatape %>% filter(crop == "rice") %>% select(-crop,-department,-year,-month ) 
+map_dbl(dtrice, mean, trim = 0.5, na.rm = TRUE)
+```
+
+
+
+## Picking the right map function
+
+Choosing the right function is important. If you know beforehand what is the expected output of the function that you pass to `map` functions, make better the task of using each type of `map` function. Lets see a example:
+
+
+- To find the columns that are numeric we use `is.numeric()`, which returns logical values `TRUE` or `FALSE`. For this reason, we utilize `map_lgl` due to allow logical outputs.
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map_lgl(cropdatape, is.numeric)
+```
+
+- To find the type of each columns we use `class()`, which returns character values, for instance, `character`, `numeric`, `logical`, `list`. For this reason, we utilize `map_chr` as long as the called function gives back characters.
+
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map_chr(cropdatape, class)
+```
+
+- To find a summary of each column we utilize `summary()`. In contrast with examples before, we are going to handle the function `map`. `map` concede more complex functions as `summary`, `str`, among others. 
+
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map(cropdatape, summary)
+```
+
+
+## Specifying Functions (.f)
+
+Until now, all the functions are defined by R-libraries. However, in the vast majority of cases users can define their own functions. Let see an example:
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map(cropdatape, function(x) sum(is.na(x)))
+```
+
+
+In this case, `function(x)sum(is.na(x))` is called, in functional programming, **Anonymous Function**.
+
+
+Additionally, another way to pass user-defined functions is using a formular short-cut. Here an example:
+
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map(cropdatape, ~ sum(is.na(.)))
+```
+
+
+## Shortcuts when f is [[
+
+Let's create a list of varieties of two crops, potato and sweet potato, called `list_of_var`.
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+ list_of_var <- list(
+          list(potato= "amarilla" , sweetpotato = "jonathan"),
+          list(potato= "huayro" , sweetpotato = "tacna"),
+          list(potato= "tomasa" , sweetpotato = "huambachero")
+ )
+```
+
+- Using anonymous function
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map_chr(list_of_var, function(x) x[["potato"]])
+map_chr(list_of_var, function(x) x[["sweetpotato"]])
+```
+
+- Using directly the name (a) (item list)
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map_chr(list_of_var, "potato")
+map_chr(list_of_var, "sweetpotato")
+```
+
+- Using the position of the item list (the first element is (a), the second is (b))
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+map_chr(list_of_var, 1)
+map_chr(list_of_var, 2)
+```
+
+
+## A list of data.frames
+
+In R, it possible to generate  a list of tiny data frames based on big data frame. For instance, we use the `split` function:
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+crops <- split(cropdatape, cropdatape$crop)
+```
+
+- Extract rice tiny data frame
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+crops$rice
+```
+
+
+
+Combining the all cases above, we can apply to obtain `R2` from statistical models. We utilize the `mtcars` dataset in this example: 
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+# Define models (don't change)
+models <- mtcars %>% 
+  split(mtcars$cyl) %>%
+  map(~ lm(mpg ~ wt, data = .))
+models
+```
+
+```{r, echo=TRUE, eval=TRUE,warning=FALSE,message=FALSE}
+summaries <- map(models, summary) %>% 
+             map_dbl(., "r.squared")
+summaries
+```
+
+
+
+
+
+
+
+#Bibiliografia
+
+- Ingles: http://menuaingles.blogspot.pe/2012/09/as-soon-as-as-long-as-as-far-as.html

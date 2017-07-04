@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r}
+library(purrr)
+```
+
+## Dealing with failures
+
+Dealing with failures in R is quite frustraiting, specially when you are running `for loops` or even `map` functions. Let's review an example:
+
+
+```{r, warning=FALSE, eval=FALSE, results='markup'}
+yield <- list( y1 = 1:10, y2= c(1:9,"a"))
+log_yield <- map(yield, log)
+```
+
+The code above shows an error message `Error in .f(.x[[i]], ...) : non-numeric argument to mathematical function`. As far you see it's enough one failure to stop the entire process. Furthermore, the error is tremendously dificult to catch when you are running an iterative operation. 
+
+As a solution, the purrr package incorporates `safely()`. `safely()` along with `map()` work perfectly to return safe outputs. It wrapps the `.f` argument and evaluate all type of user inputs that has been passed in `.x` argument. 
+
+According to Hadley Wichman, `safely()` is an adverb; it takes a verb and modifies it. That is, it takes a function as an argument and it returns a function as its output. The function that is returned is modified so it never throws an error (and never stops the rest of your computation!).
+
+In addition, `safely` return a list with two elements
+
+1. `result` is the original result. If there was an error, this will be `NULL`.
+2. `error` is an error object. If the operation was successful this will be `NULL`.
+
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+yield <- list( y1 = 1:10, y2= c(1:9,"a"))
+log_yield <- map(yield, safely(log))
+log_yield
+```
+
+The example evidence that for list `y1`, the `map` function conjointly with `safely`, return logarithmic values, whereas the `y2` list return a sanitized error message. Remember, safely never fail or stop, it always show an expected output or a sanitized error message.  
+
+
+As we can see `safely` returns two items (result and error) but one point against it is these items are unsorted. For this reason, `purrr` package includes the `transpose()` function which sort the outputs from the most succesfullness to unwellness.
+
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+yield <- list( y1 = 1:10, y2= c(1:9,"a"), y3= c(1:9,"bc"), y4= c(11:20))
+log_yield <- map(yield, safely(log))
+log_yield_trans <- transpose(log_yield)
+log_yield_trans
+```
+
+
+
+## Maps over multiple arguments
+
+
+Suppose that you want to calculate 3 random samples from the normal distribution. In R, you have to write:
+
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+#5 elements
+rnorm(5)
+#10 elements
+rnorm(10)
+#15 elements
+rnorm(15)
+```
+
+Using funtional programming, you can perform these operation using `map`:
+
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+map(list(5,10,15), rnorm)
+
+```
+
+In this case, a list of 3 elements, `5, 10, 15`, which are passed by values to `rnorm`. `map` generates a list of three 3 random samples of diferent size for each value of the list.
+
+
+
+
+### Maps over two arguments
+
+In case of having more than one argument, you can use `map2()` function. `map2()` iterate over 2 arguments. Let's two cases, one using *base R* functions, and the second one, the `purrr` package:
+
+1.  Base R
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+# 5 elements and centered in u=1
+rnorm(5,  mean = 1)
+# 10 elements and centered in u=5
+rnorm(10, mean = 5)
+# 20 elements and centered in u=10
+rnorm(20, mean = 10)
+```
+
+
+2.  Now using `map2()` (`purr` package)
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+  map2(.x = list(5,10,20), .y =  list(1,5,10), rnorm   )
+```
+
+In the second case, `map2()` requieres three arguments additional:
+
+- The first argument, `.x`, where we put the samples size
+- The second argument, `.y`, where we introduce the mean values ($u$'s) 
+- the third argument, `.f`, a function.
+
+
+### Maps over many arguments
+
+Given multiple arguments, for instance, `n` sample size, the mean $u$ and the standard devitation $\sigma$, the purrr package implement `pmap()`. A pair of examples:
+
+- Using `base R`
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+rnorm(n = 5, mean = 1, sd = 0.1)
+rnorm(n = 10, mean = 5, sd = 0.5)
+rnorm(n = 20, mean = 10, sd = 0.1)
+```
+
+- Using `pmap()`
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+ pmap( list( n    = list(5, 10, 20),
+             mean = list(1, 5, 10),
+             sd   = list(0.1, 0.5, 0.1)), rnorm )
+```
+
+In the second case, due to `rnorm` has three parameters `n`, `mean` and `sd`, we pass three lists with three samples sizes, means and s.deviations each one. 
+
+
+#### Be careful
+
+What happen in this case:`pmap(.l = list(mu, n, sd),.f =  rnorm)`? Is it everythin correct? What's the difference? 
+
+While cases befores show an appropiate order for each function (`rnorm(n, mean, sd)`), in this case the mean gets matched by `n` argument of `mean` function. Therefore, instead of relying on this positional matching, a safer alternative is to *provide names* in our list. The name of each element should be the argument name we want to match it to.
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+pmap(.l = list(mean=mu, n=n, sd=sd),.f =  rnorm)
+```
+
+
+### Invoke maps over functions
+
+Since `maps` iterate over multiple inputs or values, it also operates over multiple functions. The function on charge is `invoke_map()`.`invoke_map(  )` requieres   
+
+- `.f` : a list of functions.
+- `.x` : 
+- `...`: Additional arguments passed to each function. For instace, `n`, the distributional sample size.
+
+In the following examples we will show two cases, one, using `base R` and, second, `invoke_map()` function from `purrr` package:
+
+
+- Using `base R` functions
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+rnorm(5)
+runif(5)
+rexp(5)
+```  
+
+-Using `invoke_map()` from `purrr` package
+
+```{r, warning=FALSE, eval=TRUE, results='markup'}
+  #Form 1: defining f in the global environment
+  f <- list(rnorm, runif, rexp)
+  invoke_map(f, n =5 )
+  #Form 2: inside invoke_map
+  invoke_map(list(rnorm, runif, rexp), n =5 )
+```
+
+

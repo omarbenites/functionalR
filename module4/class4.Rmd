@@ -1,0 +1,158 @@
+---
+title: "Class 4"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+  knitr::clean_cache()
+```
+
+
+
+## Map with side effects: the walk function
+
+### Side Effects
+
+Side effects are usually described by two things:
+
+- Describe things that happen beyond the results of a function
+- Examples include: printing output, plo!ing, and saving files
+to disk
+
+### Walk
+
+`walk()` operates just like `map()` except it's designed for functions that don't return anything (side effects). You use `walk()` for functions with side effects like printing, plotting or saving.
+
+Let's check that our simulated samples are in fact what we think they are by plotting a histogram for each one.
+
+
+Let's see an example:
+
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(purrr)
+x <- list(1, "a", 3)
+out <- x %>% walk(print)
+```
+
+Besides, `out` contain the original `x` object. 
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+str(out)
+```
+
+### Walking over two or more arguments
+
+As well as `map2`, exists `walk2`. Let's review an example:
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+f <- list(Normal = "rnorm", Uniform = "runif", Exp = "rexp")
+```
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+### Define params
+params <- list(
+  Normal = list(mean = 10),
+  Uniform = list(min = 0, max = 5),
+  Exp = list(rate = 5)
+)
+```
+
+
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+# Assign the simulated samples to sims
+sims <- invoke_map(f, params, n = 50)
+```
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+# Replace "Sturges" with reasonable breaks for each sample
+breaks_list <- list(
+  Normal = seq(6,16,0.5),
+  Uniform = seq(0,5,0.25),
+  Exp =  seq(0,1.5,0.1)
+)
+```
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+### Use walk2() to make histograms with the right breaks
+walk2(.x = sims, .y = breaks_list, .f = hist)
+```
+
+### Walk over multiple arguments
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+
+# Increase sample size to 1000
+sims <- invoke_map(f, params, n = 1000)
+
+#Find breaks functions
+find_breaks<- function(x) {
+  rng <- range(x, na.rm = TRUE)
+  seq(rng[1], rng[2], length.out = 30)
+}
+
+# Compute nice_breaks (don't change this)
+nice_breaks <- map(sims, find_breaks)
+
+# Create a vector nice_titles
+nice_titles<- c("Normal(10,1)", "Uniform(0,5)", "Exp(5)")
+
+# Use pwalk() instead of walk2()
+
+arg<- list(x= sims,
+           breaks= nice_breaks,
+           main = nice_titles,
+           xlab= ""
+)
+# First way
+pwalk(.l = arg, hist)
+
+#Second way, we keep fixed the x label over all the plots
+# arg<- list(x= sims,
+#            breaks= nice_breaks,
+#            main = nice_titles
+# )
+# 
+# pwalk(.l = arg, .f = hist, xlab="")
+
+```
+
+### Walking with pipes
+
+One of the nice things about the walk() functions is that they return the object you passed to them. This means they can easily be used in pipelines (a pipeline is just a short way of saying "a statement with lots of pipes"). The following example ilustrates one of the most insteresting features:  
+
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+sims %>%
+  walk(hist) %>%
+        map(.f = summary)
+```
+
+In this example we observe 3 steps:
+
+1. `sims` is passed by `%>%`
+2.  Then, `walk` recieve `sims` and it is passed by plotting histograms using `hist`.
+3. Later, `map` receive `sims`, becuase `walk` preserve the original data `sims`. For this reason, `walk` additionally show a `summary` statics table.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,70 @@
+---
+title: "Class 5"
+output: html_notebook
+---
+
+##Chapter 5: Robust Functions
+
+When we are working with functions we must be very clear when users make failures. We need to specify what is the error that he/she has commited displaying an informative message in the console.
+
+```{r, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+# Define troublesome x and y
+x <- c(NA, NA, NA)
+y <- c( 1, NA, NA, NA)
+
+both_na <- function(x, y) {
+  # Replace condition with logical
+  if (length(x)!=length(y)) {
+    # Replace "Error" with better message
+    stop("x and y must have the same length", call. = FALSE)
+  }  
+  
+  sum(is.na(x) & is.na(y))
+}
+
+```
+
+```{r, echo=TRUE, eval=FALSE, warning=FALSE, message=TRUE}
+# Call both_na() 
+both_na()
+```
+
+It shows a error message explaining that exists different input lenghts. For this reason we use `stop()` to be more precisely when we deal with failures. An important argument here is `call. = FALSE` that unlink the `Error` word of your error message. Otherwise, in `call.=TRUE`, the word `Error` goes along with your message.
+
+### Unstable types
+
+
+
+```{r}
+df <- data.frame(
+  a = 1L,
+  b = 1.5,
+  y = Sys.time(),
+  z = ordered(1)
+)
+
+
+col_classes <- function(df) {
+  class_list <- map(df, class)
+  
+  # Add a check that no element of class_list has length > 1
+  #if (condition) {
+  if (any(map_dbl(class_list, length)>1)) {
+    stop("Some columns have more than one class", call. = FALSE)
+  }
+  
+  # Use flatten_chr() to return a character vector
+  flatten_chr(class_list)
+}
+
+# Check that our new function is type consistent
+df %>% col_classes() %>% str()
+
+
+# Check that our new function is type consistent
+df %>% col_classes() %>% str()
+df[3:4] %>% col_classes() %>% str()
+df[1:2] %>% col_classes() %>% str()
+```
+
+
